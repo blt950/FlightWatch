@@ -61,6 +61,20 @@ namespace FlightWatch
          * ===============================
         */
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        struct MyStruct
+        {
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            public string title;
+            public bool stall;
+            public bool overspeed;
+        };
+
+        enum DEFINITIONS : uint
+        {
+            MyStruct,
+        }
+
         enum CLIENT_DATA_IDS
         {
             PMDG_NGX_DATA_ID = 0x4E477831,
@@ -113,6 +127,7 @@ namespace FlightWatch
             try
             {
 
+                // PMDG NGX Vars
                 simconnect.MapClientDataNameToID("PMDG_NGX_Data", CLIENT_DATA_IDS.PMDG_NGX_DATA_ID);
                 simconnect.MapClientDataNameToID("PMDG_NGX_Control", CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID);
 
@@ -130,6 +145,13 @@ namespace FlightWatch
                     SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
                 simconnect.RequestClientData(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID, DATA_REQUEST_ID.CONTROL_REQUEST, CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION,
                     SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+
+                // P3D Default vars
+                simconnect.AddToDataDefinition(DEFINITIONS.MyStruct, "title", null, SIMCONNECT_DATATYPE.STRING256, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.MyStruct, "STALL WARNING", null, SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.MyStruct, "OVERSPEED WARNING", null, SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.RegisterDataDefineStruct<MyStruct>(DEFINITIONS.MyStruct);
+                simconnect.OnRecvSimobjectData += new SimConnect.RecvSimobjectDataEventHandler(simconnect_OnRecvSimobjectData);
 
             }
             catch (COMException ex)
@@ -239,6 +261,20 @@ namespace FlightWatch
             }
         }
 
+        void simconnect_OnRecvSimobjectData(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
+        {
+
+            switch ((DEFINITIONS)data.dwRequestID)
+            {
+                case DEFINITIONS.MyStruct:
+                    MyStruct sData = (MyStruct)data.dwData[0];
+                    displayText(sData.title);
+                    displayText("Stall:" + Convert.ToString(sData.stall));
+                    displayText("Ovspd:" + Convert.ToString(sData.overspeed));
+                    break;
+            }
+        }
+
 
         /*
          * ===============================
@@ -260,12 +296,6 @@ namespace FlightWatch
             DateTime dt = DateTime.Now;
             String time = "[" + dt.ToString("HH:mm:ss") + "] ";
             richResponse.Text = time + (s + "\n") + richResponse.Text;
-        }
-
-        private void fetchTimer_Tick(object sender, EventArgs e)
-        {
-            //simconnect.RequestDataOnSimObjectType(DATA_REQUESTS.REQUEST_1, DEFINITIONS.PMDG_NGX_Data, 0, SIMCONNECT_SIMOBJECT_TYPE.USER);
-            // Useless, remove?
         }
 
         private void Notify(string s, string msg = "You should check your plane.")
@@ -327,7 +357,7 @@ namespace FlightWatch
                     simconnect.OnRecvQuit += new SimConnect.RecvQuitEventHandler(simconnect_OnRecvQuit);
                     simconnect.OnRecvException += new SimConnect.RecvExceptionEventHandler(simconnect_OnRecvException);
                    
-                    setButtons(false, true, false, false, false);
+                    setButtons(false, true, true, false, false);
                     initDataRequest();
 
                 }
@@ -353,7 +383,8 @@ namespace FlightWatch
 
         private void buttonB737_Click(object sender, EventArgs e)
         {
-            
+            displayText("Request sent...");
+            simconnect.RequestDataOnSimObject(DEFINITIONS.MyStruct, DEFINITIONS.MyStruct, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.SIM_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT, 0, 0, 0);
         }
 
         private void buttonB777_Click(object sender, EventArgs e)
