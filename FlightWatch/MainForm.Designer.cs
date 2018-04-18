@@ -47,7 +47,7 @@
             this.buttonB737.Name = "buttonB737";
             this.buttonB737.Size = new System.Drawing.Size(125, 23);
             this.buttonB737.TabIndex = 0;
-            this.buttonB737.Text = "Watch PMDG 737";
+            this.buttonB737.Text = "Track PMDG 737";
             this.buttonB737.UseVisualStyleBackColor = true;
             this.buttonB737.Click += new System.EventHandler(this.buttonB737_Click);
             // 
@@ -58,7 +58,7 @@
             this.buttonB777.Name = "buttonB777";
             this.buttonB777.Size = new System.Drawing.Size(125, 23);
             this.buttonB777.TabIndex = 1;
-            this.buttonB777.Text = "Watch PMDG 777";
+            this.buttonB777.Text = "Track PMDG 777";
             this.buttonB777.UseVisualStyleBackColor = true;
             this.buttonB777.Click += new System.EventHandler(this.buttonB777_Click);
             // 
@@ -69,7 +69,7 @@
             this.buttonB747.Name = "buttonB747";
             this.buttonB747.Size = new System.Drawing.Size(125, 23);
             this.buttonB747.TabIndex = 2;
-            this.buttonB747.Text = "Watch PMDG 747";
+            this.buttonB747.Text = "Track PMDG 747";
             this.buttonB747.UseVisualStyleBackColor = true;
             this.buttonB747.Click += new System.EventHandler(this.buttonB747_Click);
             // 

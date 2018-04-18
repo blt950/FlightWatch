@@ -75,7 +75,7 @@
       <DependentUpon>EULAForm.cs</DependentUpon>
     </Compile>
     <Compile Include="FlashWindow.cs" />
-    <Compile Include="SDK.cs" />
+    <Compile Include="NGX_SDK.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

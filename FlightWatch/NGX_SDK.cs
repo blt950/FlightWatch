@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 namespace FlightWatch
 {
-    public class SDK
+    public class NGX_SDK
     {
         public const string PMDG_NGX_DATA_NAME = "PMDG_NGX_Data";
         public const string PMDG_NGX_CONTROL_NAME = "PMDG_NGX_Control";

@@ -31,6 +31,8 @@ namespace FlightWatch
         private bool WARN_annunFIRE_WARN, WARN_annunMASTER_CAUTION = false;
         private bool WARN_annunANTI_ICE, WARN_annunHYD, WARN_annunDOORS, WARN_annunENG, WARN_annunOVERHEAD, WARN_annunAIR_COND = false;
 
+        private bool WARN_stall, WARN_overspeed = false;
+
 
         /*
          * ===============================
@@ -131,13 +133,13 @@ namespace FlightWatch
                 simconnect.MapClientDataNameToID("PMDG_NGX_Data", CLIENT_DATA_IDS.PMDG_NGX_DATA_ID);
                 simconnect.MapClientDataNameToID("PMDG_NGX_Control", CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID);
 
-                simconnect.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(SDK.PMDG_NGX_Data)),
+                simconnect.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Data)),
                     0, SimConnect.SIMCONNECT_UNUSED);
-                simconnect.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(SDK.PMDG_NGX_Control)),
+                simconnect.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Control)),
                     0, SimConnect.SIMCONNECT_UNUSED);
 
-                simconnect.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, SDK.PMDG_NGX_Data>(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION);
-                simconnect.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, SDK.PMDG_NGX_Control>(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION);
+                simconnect.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Data>(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION);
+                simconnect.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Control>(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION);
 
                 simconnect.OnRecvClientData += new SimConnect.RecvClientDataEventHandler(simconnect_ClientData);
 
@@ -183,14 +185,9 @@ namespace FlightWatch
             switch ((DATA_REQUEST_ID)data.dwRequestID)
             {
                 case DATA_REQUEST_ID.DATA_REQUEST:
-                    SDK.PMDG_NGX_Data sData = (SDK.PMDG_NGX_Data)data.dwData[0];
+                    NGX_SDK.PMDG_NGX_Data sData = (NGX_SDK.PMDG_NGX_Data)data.dwData[0];
                     this.Invoke((MethodInvoker)delegate
                     {
-                        /*mcp_altitude
-                        mcp_altitude.Text = Convert.ToString(sData.MCP_Altitude);
-                        mcp_heading.Text = Convert.ToString(sData.MCP_Heading);
-                        mcp_fd.Checked = (sData.MCP_FDSw[0] == 1 ? true : false);*/
-                        //displayText(Convert.ToString(sData.WARN_annunFIRE_WARN[1]));
 
                         if (WARN_annunFIRE_WARN != Convert.ToBoolean(sData.WARN_annunFIRE_WARN[1]))
                         {
@@ -255,7 +252,7 @@ namespace FlightWatch
                     });
                     break;
                 case DATA_REQUEST_ID.CONTROL_REQUEST:
-                    SDK.PMDG_NGX_Control cData = (SDK.PMDG_NGX_Control)data.dwData[0];
+                    NGX_SDK.PMDG_NGX_Control cData = (NGX_SDK.PMDG_NGX_Control)data.dwData[0];
 
                     break;
             }
@@ -268,9 +265,19 @@ namespace FlightWatch
             {
                 case DEFINITIONS.MyStruct:
                     MyStruct sData = (MyStruct)data.dwData[0];
-                    displayText(sData.title);
-                    displayText("Stall:" + Convert.ToString(sData.stall));
-                    displayText("Ovspd:" + Convert.ToString(sData.overspeed));
+
+                    if (WARN_stall != sData.stall)
+                    {
+                        WARN_stall = sData.stall;
+                        if (sData.stall) Notify("Stall!");
+                    }
+
+                    if (WARN_overspeed != sData.overspeed)
+                    {
+                        WARN_overspeed = sData.overspeed;
+                        if (sData.overspeed) Notify("Overspeed!");
+                    }
+
                     break;
             }
         }
@@ -358,7 +365,6 @@ namespace FlightWatch
                     simconnect.OnRecvException += new SimConnect.RecvExceptionEventHandler(simconnect_OnRecvException);
                    
                     setButtons(false, true, true, false, false);
-                    initDataRequest();
 
                 }
                 catch (COMException ex)
@@ -379,12 +385,20 @@ namespace FlightWatch
         {
             closeConnection();
             setButtons(true, false, false, false, false);
+
+            buttonB737.Text = "Track PMDG 737";
+            buttonB777.Text = "Track PMDG 777";
+            buttonB747.Text = "Track PMDG 747";
         }
 
         private void buttonB737_Click(object sender, EventArgs e)
         {
-            displayText("Request sent...");
+            initDataRequest();
+            displayText("Flight tracking started.");
             simconnect.RequestDataOnSimObject(DEFINITIONS.MyStruct, DEFINITIONS.MyStruct, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.SIM_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT, 0, 0, 0);
+
+            buttonB737.Enabled = false;
+            buttonB737.Text = "Tracking PMDG 737...";
         }
 
         private void buttonB777_Click(object sender, EventArgs e)
