@@ -31,7 +31,7 @@ namespace FlightWatch
         private bool alarmTriggered = false;
 
         private bool WARN_annunFIRE_WARN, WARN_annunMASTER_CAUTION = false;
-        private bool WARN_annunANTI_ICE, WARN_annunHYD, WARN_annunDOORS, WARN_annunENG, WARN_annunOVERHEAD, WARN_annunAIR_COND = false;
+        private bool WARN_annunANTI_ICE, WARN_annunHYD, WARN_annunDOORS, WARN_annunENG, WARN_annunOVERHEAD, WARN_annunAIR_COND, MAIN_annunAP, MAIN_annunAT = false;
 
         private bool WARN_stall, WARN_overspeed = false;
 
@@ -257,6 +257,22 @@ namespace FlightWatch
                         {
                             WARN_annunAIR_COND = Convert.ToBoolean(sData.WARN_annunAIR_COND);
                             if (Convert.ToBoolean(sData.WARN_annunAIR_COND)) Notify("Air-condition Warning!");
+                        }
+
+                        // The light flashes, so we block it spamming notifications if alarm already on.
+                        if (!alarmTriggered)
+                        {
+                            if (MAIN_annunAP != Convert.ToBoolean(sData.MAIN_annunAP[0]))
+                            {
+                                MAIN_annunAP = Convert.ToBoolean(sData.MAIN_annunAP[0]);
+                                if (Convert.ToBoolean(sData.MAIN_annunAP[0])) Notify("Auto Pilot Warning!");
+                            }
+
+                            if (MAIN_annunAT != Convert.ToBoolean(sData.MAIN_annunAT[0]))
+                            {
+                                MAIN_annunAT = Convert.ToBoolean(sData.MAIN_annunAT[0]);
+                                if (Convert.ToBoolean(sData.MAIN_annunAT[0])) Notify("Auto Throttle Warning!");
+                            }
                         }
 
                     });
