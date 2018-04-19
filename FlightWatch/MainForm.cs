@@ -24,6 +24,8 @@ namespace FlightWatch
         */
         const int WM_USER_SIMCONNECT = 0x0402;
         SimConnect simconnect = null;
+        SimConnect simconnectPMDG = null;
+        
 
         private string alarmPath = "beep.wav";
         private bool alarmTriggered = false;
@@ -99,6 +101,11 @@ namespace FlightWatch
                 {
                     simconnect.ReceiveMessage();
                 }
+
+                if (simconnectPMDG != null)
+                {
+                    simconnectPMDG.ReceiveMessage();
+                }
             }
             else
             {
@@ -114,38 +121,44 @@ namespace FlightWatch
 
         private void closeConnection()
         {
-            if (simconnect != null)
+            if (simconnect != null && simconnectPMDG != null)
             {
                 // Dispose serves the same purpose as SimConnect_Close() 
                 simconnect.Dispose();
                 simconnect = null;
 
+                simconnectPMDG.Dispose();
+                simconnectPMDG = null;
+
                 displayText("Disconnected");
+
+            } else {
+                MessageBox.Show("Connection closing error. This should not happen, please contact author.", "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            
         }
 
         private void initDataRequest()
         {
             try
             {
-
                 // PMDG NGX Vars
-                simconnect.MapClientDataNameToID("PMDG_NGX_Data", CLIENT_DATA_IDS.PMDG_NGX_DATA_ID);
-                simconnect.MapClientDataNameToID("PMDG_NGX_Control", CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID);
+                simconnectPMDG.MapClientDataNameToID("PMDG_NGX_Data", CLIENT_DATA_IDS.PMDG_NGX_DATA_ID);
+                simconnectPMDG.MapClientDataNameToID("PMDG_NGX_Control", CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID);
 
-                simconnect.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Data)),
+                simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Data)),
                     0, SimConnect.SIMCONNECT_UNUSED);
-                simconnect.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Control)),
+                simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Control)),
                     0, SimConnect.SIMCONNECT_UNUSED);
 
-                simconnect.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Data>(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION);
-                simconnect.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Control>(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION);
+                simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Data>(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION);
+                simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Control>(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION);
 
-                simconnect.OnRecvClientData += new SimConnect.RecvClientDataEventHandler(simconnect_ClientData);
+                simconnectPMDG.OnRecvClientData += new SimConnect.RecvClientDataEventHandler(simconnect_ClientData);
 
-                simconnect.RequestClientData(CLIENT_DATA_IDS.PMDG_NGX_DATA_ID, DATA_REQUEST_ID.DATA_REQUEST, CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION,
+                simconnectPMDG.RequestClientData(CLIENT_DATA_IDS.PMDG_NGX_DATA_ID, DATA_REQUEST_ID.DATA_REQUEST, CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION,
                     SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
-                simconnect.RequestClientData(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID, DATA_REQUEST_ID.CONTROL_REQUEST, CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION,
+                simconnectPMDG.RequestClientData(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID, DATA_REQUEST_ID.CONTROL_REQUEST, CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION,
                     SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
 
                 // P3D Default vars
@@ -154,17 +167,14 @@ namespace FlightWatch
                 simconnect.AddToDataDefinition(DEFINITIONS.MyStruct, "OVERSPEED WARNING", null, SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                 simconnect.RegisterDataDefineStruct<MyStruct>(DEFINITIONS.MyStruct);
                 simconnect.OnRecvSimobjectData += new SimConnect.RecvSimobjectDataEventHandler(simconnect_OnRecvSimobjectData);
+                simconnect.RequestDataOnSimObject(DEFINITIONS.MyStruct, DEFINITIONS.MyStruct, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.SIM_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT, 0, 0, 0);
+
 
             }
             catch (COMException ex)
             {
                 MessageBox.Show(ex.Message, "COM Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        void simconnect_OnRecvOpen(SimConnect sender, SIMCONNECT_RECV_OPEN data)
-        {
-            displayText("Connected to Prepar3D");
         }
 
         // The case where the user closes Prepar3D 
@@ -260,7 +270,6 @@ namespace FlightWatch
 
         void simconnect_OnRecvSimobjectData(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
         {
-
             switch ((DEFINITIONS)data.dwRequestID)
             {
                 case DEFINITIONS.MyStruct:
@@ -354,16 +363,20 @@ namespace FlightWatch
 
         private void buttonConnect_Click(object sender, EventArgs e)
         {
-            if (simconnect == null)
+            if (simconnect == null && simconnectPMDG == null)
             {
                 try
                 {
-
+                    
                     simconnect = new SimConnect("Managed", this.Handle, WM_USER_SIMCONNECT, null, 0);
-                    simconnect.OnRecvOpen += new SimConnect.RecvOpenEventHandler(simconnect_OnRecvOpen);
                     simconnect.OnRecvQuit += new SimConnect.RecvQuitEventHandler(simconnect_OnRecvQuit);
                     simconnect.OnRecvException += new SimConnect.RecvExceptionEventHandler(simconnect_OnRecvException);
-                   
+                    
+                    simconnectPMDG = new SimConnect("Managed", this.Handle, WM_USER_SIMCONNECT, null, 0);
+                    simconnectPMDG.OnRecvQuit += new SimConnect.RecvQuitEventHandler(simconnect_OnRecvQuit);
+                    simconnectPMDG.OnRecvException += new SimConnect.RecvExceptionEventHandler(simconnect_OnRecvException);
+
+                    displayText("Connected to Prepar3D");
                     setButtons(false, true, true, false, false);
 
                 }
@@ -395,7 +408,6 @@ namespace FlightWatch
         {
             initDataRequest();
             displayText("Flight tracking started.");
-            simconnect.RequestDataOnSimObject(DEFINITIONS.MyStruct, DEFINITIONS.MyStruct, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.SIM_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT, 0, 0, 0);
 
             buttonB737.Enabled = false;
             buttonB737.Text = "Tracking PMDG 737...";
