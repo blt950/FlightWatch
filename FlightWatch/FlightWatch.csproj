@@ -68,6 +68,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="B777_SDK.cs" />
     <Compile Include="EULAForm.cs">
       <SubType>Form</SubType>
     </Compile>

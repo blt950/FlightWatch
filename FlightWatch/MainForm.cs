@@ -25,12 +25,14 @@ namespace FlightWatch
         const int WM_USER_SIMCONNECT = 0x0402;
         SimConnect simconnect = null;
         SimConnect simconnectPMDG = null;
-        
+
+
+        private int trackingType = 0; // 1 = NGX, 2 = 777, 3 = 747
 
         private string alarmPath = "beep.wav";
         private bool alarmTriggered = false;
 
-        private bool WARN_annunFIRE_WARN, WARN_annunMASTER_CAUTION = false;
+        private bool WARN_annunFIRE_WARN, WARN_annunMASTER_CAUTION, WARN_annunMASTER_WARNING = false;
         private bool WARN_annunANTI_ICE, WARN_annunHYD, WARN_annunDOORS, WARN_annunENG, WARN_annunOVERHEAD, WARN_annunAIR_COND, MAIN_annunAP, MAIN_annunAT = false;
 
         private bool WARN_stall, WARN_overspeed = false;
@@ -79,12 +81,19 @@ namespace FlightWatch
             MyStruct,
         }
 
-        enum CLIENT_DATA_IDS
+        enum CLIENT_DATA_IDS_NGX
         {
             PMDG_NGX_DATA_ID = 0x4E477831,
             PMDG_NGX_DATA_DEFINITION = 0x4E477832,
             PMDG_NGX_CONTROL_ID = 0x4E477833,
             PMDG_NGX_CONTROL_DEFINITION = 0x4E477834,
+        };
+        enum CLIENT_DATA_IDS_777X
+        {
+            PMDG_777X_DATA_ID = 0x4E477831,
+            PMDG_777X_DATA_DEFINITION = 0x4E477832,
+            PMDG_777X_CONTROL_ID = 0x4E477833,
+            PMDG_777X_CONTROL_DEFINITION = 0x4E477834,
         };
         enum DATA_REQUEST_ID
         {
@@ -142,24 +151,48 @@ namespace FlightWatch
         {
             try
             {
-                // PMDG NGX Vars
-                simconnectPMDG.MapClientDataNameToID("PMDG_NGX_Data", CLIENT_DATA_IDS.PMDG_NGX_DATA_ID);
-                simconnectPMDG.MapClientDataNameToID("PMDG_NGX_Control", CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID);
+                if(trackingType == 1)
+                {
+                    // PMDG NGX Vars
+                    simconnectPMDG.MapClientDataNameToID("PMDG_NGX_Data", CLIENT_DATA_IDS_NGX.PMDG_NGX_DATA_ID);
+                    simconnectPMDG.MapClientDataNameToID("PMDG_NGX_Control", CLIENT_DATA_IDS_NGX.PMDG_NGX_CONTROL_ID);
 
-                simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Data)),
-                    0, SimConnect.SIMCONNECT_UNUSED);
-                simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Control)),
-                    0, SimConnect.SIMCONNECT_UNUSED);
+                    simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS_NGX.PMDG_NGX_DATA_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Data)),
+                        0, SimConnect.SIMCONNECT_UNUSED);
+                    simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS_NGX.PMDG_NGX_CONTROL_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(NGX_SDK.PMDG_NGX_Control)),
+                        0, SimConnect.SIMCONNECT_UNUSED);
 
-                simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Data>(CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION);
-                simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Control>(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION);
+                    simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Data>(CLIENT_DATA_IDS_NGX.PMDG_NGX_DATA_DEFINITION);
+                    simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, NGX_SDK.PMDG_NGX_Control>(CLIENT_DATA_IDS_NGX.PMDG_NGX_CONTROL_DEFINITION);
 
-                simconnectPMDG.OnRecvClientData += new SimConnect.RecvClientDataEventHandler(simconnect_ClientData);
+                    simconnectPMDG.OnRecvClientData += new SimConnect.RecvClientDataEventHandler(simconnect_ClientData);
 
-                simconnectPMDG.RequestClientData(CLIENT_DATA_IDS.PMDG_NGX_DATA_ID, DATA_REQUEST_ID.DATA_REQUEST, CLIENT_DATA_IDS.PMDG_NGX_DATA_DEFINITION,
-                    SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
-                simconnectPMDG.RequestClientData(CLIENT_DATA_IDS.PMDG_NGX_CONTROL_ID, DATA_REQUEST_ID.CONTROL_REQUEST, CLIENT_DATA_IDS.PMDG_NGX_CONTROL_DEFINITION,
-                    SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+                    simconnectPMDG.RequestClientData(CLIENT_DATA_IDS_NGX.PMDG_NGX_DATA_ID, DATA_REQUEST_ID.DATA_REQUEST, CLIENT_DATA_IDS_NGX.PMDG_NGX_DATA_DEFINITION,
+                        SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+                    simconnectPMDG.RequestClientData(CLIENT_DATA_IDS_NGX.PMDG_NGX_CONTROL_ID, DATA_REQUEST_ID.CONTROL_REQUEST, CLIENT_DATA_IDS_NGX.PMDG_NGX_CONTROL_DEFINITION,
+                        SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+                } else if(trackingType == 2) {
+                    // PMDG B777 Vars
+                    simconnectPMDG.MapClientDataNameToID("PMDG_777X_Data", CLIENT_DATA_IDS_777X.PMDG_777X_DATA_ID);
+                    simconnectPMDG.MapClientDataNameToID("PMDG_777X_Control", CLIENT_DATA_IDS_777X.PMDG_777X_CONTROL_ID);
+
+                    simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS_777X.PMDG_777X_DATA_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(B777_SDK.PMDG_777X_Data)),
+                        0, SimConnect.SIMCONNECT_UNUSED);
+                    simconnectPMDG.AddToClientDataDefinition(CLIENT_DATA_IDS_777X.PMDG_777X_CONTROL_DEFINITION, 0, (uint)Marshal.SizeOf(typeof(B777_SDK.PMDG_777X_Control)),
+                        0, SimConnect.SIMCONNECT_UNUSED);
+
+                    simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, B777_SDK.PMDG_777X_Data>(CLIENT_DATA_IDS_777X.PMDG_777X_DATA_DEFINITION);
+                    simconnectPMDG.RegisterStruct<SIMCONNECT_RECV_CLIENT_DATA, B777_SDK.PMDG_777X_Control>(CLIENT_DATA_IDS_777X.PMDG_777X_CONTROL_DEFINITION);
+
+                    simconnectPMDG.OnRecvClientData += new SimConnect.RecvClientDataEventHandler(simconnect_ClientData);
+
+                    simconnectPMDG.RequestClientData(CLIENT_DATA_IDS_777X.PMDG_777X_DATA_ID, DATA_REQUEST_ID.DATA_REQUEST, CLIENT_DATA_IDS_777X.PMDG_777X_DATA_DEFINITION,
+                        SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+                    simconnectPMDG.RequestClientData(CLIENT_DATA_IDS_777X.PMDG_777X_CONTROL_ID, DATA_REQUEST_ID.CONTROL_REQUEST, CLIENT_DATA_IDS_777X.PMDG_777X_CONTROL_DEFINITION,
+                        SIMCONNECT_CLIENT_DATA_PERIOD.ON_SET, SIMCONNECT_CLIENT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+
+                }
+                
 
                 // P3D Default vars
                 simconnect.AddToDataDefinition(DEFINITIONS.MyStruct, "title", null, SIMCONNECT_DATATYPE.STRING256, 0.0f, SimConnect.SIMCONNECT_UNUSED);
@@ -195,91 +228,141 @@ namespace FlightWatch
             switch ((DATA_REQUEST_ID)data.dwRequestID)
             {
                 case DATA_REQUEST_ID.DATA_REQUEST:
-                    NGX_SDK.PMDG_NGX_Data sData = (NGX_SDK.PMDG_NGX_Data)data.dwData[0];
-                    this.Invoke((MethodInvoker)delegate
+
+                    displayText("im testin type: " + trackingType);
+
+                    if (trackingType == 1) // *** PMDG NGX ***
                     {
-
-                        if (WARN_annunFIRE_WARN != Convert.ToBoolean(sData.WARN_annunFIRE_WARN[1]))
+                        NGX_SDK.PMDG_NGX_Data sData = (NGX_SDK.PMDG_NGX_Data)data.dwData[0];
+                        this.Invoke((MethodInvoker)delegate
                         {
-                            WARN_annunFIRE_WARN = Convert.ToBoolean(sData.WARN_annunFIRE_WARN[1]);
-                            if (Convert.ToBoolean(sData.WARN_annunFIRE_WARN[1])) Notify("Fire Warning!");
-                        }
 
-                        if (WARN_annunMASTER_CAUTION != Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[1]))
-                        {
-                            WARN_annunMASTER_CAUTION = Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[1]);
-                            if (Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[1]))
+                            if (WARN_annunFIRE_WARN != Convert.ToBoolean(sData.WARN_annunFIRE_WARN[1]))
                             {
-                                string msg = null;
-
-                                if (Convert.ToBoolean(sData.WARN_annunFLT_CONT)) msg += "FLT-CONT ";
-                                if (Convert.ToBoolean(sData.WARN_annunIRS)) msg += "IRS ";
-                                if (Convert.ToBoolean(sData.WARN_annunFUEL)) msg += "FUEL ";
-                                if (Convert.ToBoolean(sData.WARN_annunELEC)) msg += "ELEC ";
-                                if (Convert.ToBoolean(sData.WARN_annunAPU)) msg += "APU ";
-                                if (Convert.ToBoolean(sData.WARN_annunOVHT_DET)) msg += "OVHT/DET ";
-
-                                if (msg != null) Notify("Master Caution!", msg); else Notify("Master Caution!");
-                            }
-                        }
-
-                        if (WARN_annunANTI_ICE != Convert.ToBoolean(sData.WARN_annunANTI_ICE))
-                        {
-                            WARN_annunANTI_ICE = Convert.ToBoolean(sData.WARN_annunANTI_ICE);
-                            if (Convert.ToBoolean(sData.WARN_annunANTI_ICE)) Notify("Anti-Ice Warning!");
-                        }
-
-                        if (WARN_annunHYD != Convert.ToBoolean(sData.WARN_annunHYD))
-                        {
-                            WARN_annunHYD = Convert.ToBoolean(sData.WARN_annunHYD);
-                            if (Convert.ToBoolean(sData.WARN_annunHYD)) Notify("Hydraulics Warning!");
-                        }
-
-                        if (WARN_annunDOORS != Convert.ToBoolean(sData.WARN_annunDOORS))
-                        {
-                            WARN_annunDOORS = Convert.ToBoolean(sData.WARN_annunDOORS);
-                            if (Convert.ToBoolean(sData.WARN_annunDOORS)) Notify("Doors Warning!");
-                        }
-
-                        if (WARN_annunENG != Convert.ToBoolean(sData.WARN_annunENG))
-                        {
-                            WARN_annunENG = Convert.ToBoolean(sData.WARN_annunENG);
-                            if (Convert.ToBoolean(sData.WARN_annunENG)) Notify("Engine Warning!");
-                        }
-
-                        if (WARN_annunOVERHEAD != Convert.ToBoolean(sData.WARN_annunOVERHEAD))
-                        {
-                            WARN_annunOVERHEAD = Convert.ToBoolean(sData.WARN_annunOVERHEAD);
-                            if (Convert.ToBoolean(sData.WARN_annunOVERHEAD)) Notify("Overhead Warning!");
-                        }
-
-                        if (WARN_annunAIR_COND != Convert.ToBoolean(sData.WARN_annunAIR_COND))
-                        {
-                            WARN_annunAIR_COND = Convert.ToBoolean(sData.WARN_annunAIR_COND);
-                            if (Convert.ToBoolean(sData.WARN_annunAIR_COND)) Notify("Air-condition Warning!");
-                        }
-
-                        // The light flashes, so we block it spamming notifications if alarm already on.
-                        if (!alarmTriggered)
-                        {
-                            if (MAIN_annunAP != Convert.ToBoolean(sData.MAIN_annunAP[0]))
-                            {
-                                MAIN_annunAP = Convert.ToBoolean(sData.MAIN_annunAP[0]);
-                                if (Convert.ToBoolean(sData.MAIN_annunAP[0])) Notify("Auto Pilot Warning!");
+                                WARN_annunFIRE_WARN = Convert.ToBoolean(sData.WARN_annunFIRE_WARN[1]);
+                                if (Convert.ToBoolean(sData.WARN_annunFIRE_WARN[1])) Notify("Fire Warning!");
                             }
 
-                            if (MAIN_annunAT != Convert.ToBoolean(sData.MAIN_annunAT[0]))
+                            if (WARN_annunMASTER_CAUTION != Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[1]))
                             {
-                                MAIN_annunAT = Convert.ToBoolean(sData.MAIN_annunAT[0]);
-                                if (Convert.ToBoolean(sData.MAIN_annunAT[0])) Notify("Auto Throttle Warning!");
-                            }
-                        }
+                                WARN_annunMASTER_CAUTION = Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[1]);
+                                if (Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[1]))
+                                {
+                                    string msg = null;
 
-                    });
+                                    if (Convert.ToBoolean(sData.WARN_annunFLT_CONT)) msg += "FLT-CONT ";
+                                    if (Convert.ToBoolean(sData.WARN_annunIRS)) msg += "IRS ";
+                                    if (Convert.ToBoolean(sData.WARN_annunFUEL)) msg += "FUEL ";
+                                    if (Convert.ToBoolean(sData.WARN_annunELEC)) msg += "ELEC ";
+                                    if (Convert.ToBoolean(sData.WARN_annunAPU)) msg += "APU ";
+                                    if (Convert.ToBoolean(sData.WARN_annunOVHT_DET)) msg += "OVHT/DET ";
+
+                                    if (msg != null) Notify("Master Caution!", msg); else Notify("Master Caution!");
+                                }
+                            }
+
+                            if (WARN_annunANTI_ICE != Convert.ToBoolean(sData.WARN_annunANTI_ICE))
+                            {
+                                WARN_annunANTI_ICE = Convert.ToBoolean(sData.WARN_annunANTI_ICE);
+                                if (Convert.ToBoolean(sData.WARN_annunANTI_ICE)) Notify("Anti-Ice Warning!");
+                            }
+
+                            if (WARN_annunHYD != Convert.ToBoolean(sData.WARN_annunHYD))
+                            {
+                                WARN_annunHYD = Convert.ToBoolean(sData.WARN_annunHYD);
+                                if (Convert.ToBoolean(sData.WARN_annunHYD)) Notify("Hydraulics Warning!");
+                            }
+
+                            if (WARN_annunDOORS != Convert.ToBoolean(sData.WARN_annunDOORS))
+                            {
+                                WARN_annunDOORS = Convert.ToBoolean(sData.WARN_annunDOORS);
+                                if (Convert.ToBoolean(sData.WARN_annunDOORS)) Notify("Doors Warning!");
+                            }
+
+                            if (WARN_annunENG != Convert.ToBoolean(sData.WARN_annunENG))
+                            {
+                                WARN_annunENG = Convert.ToBoolean(sData.WARN_annunENG);
+                                if (Convert.ToBoolean(sData.WARN_annunENG)) Notify("Engine Warning!");
+                            }
+
+                            if (WARN_annunOVERHEAD != Convert.ToBoolean(sData.WARN_annunOVERHEAD))
+                            {
+                                WARN_annunOVERHEAD = Convert.ToBoolean(sData.WARN_annunOVERHEAD);
+                                if (Convert.ToBoolean(sData.WARN_annunOVERHEAD)) Notify("Overhead Warning!");
+                            }
+
+                            if (WARN_annunAIR_COND != Convert.ToBoolean(sData.WARN_annunAIR_COND))
+                            {
+                                WARN_annunAIR_COND = Convert.ToBoolean(sData.WARN_annunAIR_COND);
+                                if (Convert.ToBoolean(sData.WARN_annunAIR_COND)) Notify("Air-condition Warning!");
+                            }
+
+                            // The light flashes, so we block it spamming notifications if alarm already on.
+                            if (!alarmTriggered)
+                            {
+                                if (MAIN_annunAP != Convert.ToBoolean(sData.MAIN_annunAP[0]))
+                                {
+                                    MAIN_annunAP = Convert.ToBoolean(sData.MAIN_annunAP[0]);
+                                    if (Convert.ToBoolean(sData.MAIN_annunAP[0])) Notify("Auto Pilot Warning!");
+                                }
+
+                                if (MAIN_annunAT != Convert.ToBoolean(sData.MAIN_annunAT[0]))
+                                {
+                                    MAIN_annunAT = Convert.ToBoolean(sData.MAIN_annunAT[0]);
+                                    if (Convert.ToBoolean(sData.MAIN_annunAT[0])) Notify("Auto Throttle Warning!");
+                                }
+                            }
+
+                        });
+                    } else if (trackingType == 2) { // *** PMDG B777 ***
+
+                        B777_SDK.PMDG_777X_Data sData = (B777_SDK.PMDG_777X_Data)data.dwData[0];
+                        this.Invoke((MethodInvoker)delegate
+                        {
+
+                            displayText("im testin");
+
+                            // Caution work, but not warning.
+                            if (WARN_annunMASTER_WARNING != Convert.ToBoolean(sData.WARN_annunMASTER_WARNING[0]))
+                            {
+                                WARN_annunMASTER_WARNING = Convert.ToBoolean(sData.WARN_annunMASTER_WARNING[0]);
+                                if (Convert.ToBoolean(sData.WARN_annunMASTER_WARNING[0])) Notify("Master Warning!");
+                            }
+
+                            if (WARN_annunMASTER_CAUTION != Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[0]))
+                            {
+                                WARN_annunMASTER_CAUTION = Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[0]);
+                                if (Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[0]))
+                                {
+                                    string msg = null;
+
+                                    /*if (Convert.ToBoolean(sData.WARN_annunFLT_CONT)) msg += "FLT-CONT ";
+                                    if (Convert.ToBoolean(sData.WARN_annunIRS)) msg += "IRS ";
+                                    if (Convert.ToBoolean(sData.WARN_annunFUEL)) msg += "FUEL ";
+                                    if (Convert.ToBoolean(sData.WARN_annunELEC)) msg += "ELEC ";
+                                    if (Convert.ToBoolean(sData.WARN_annunAPU)) msg += "APU ";
+                                    if (Convert.ToBoolean(sData.WARN_annunOVHT_DET)) msg += "OVHT/DET ";*/
+
+                                    if (msg != null) Notify("Master Caution!", msg); else Notify("Master Caution!");
+                                }
+                            }
+
+                        });
+
+                    }
+
+                    
                     break;
                 case DATA_REQUEST_ID.CONTROL_REQUEST:
-                    NGX_SDK.PMDG_NGX_Control cData = (NGX_SDK.PMDG_NGX_Control)data.dwData[0];
 
+                    if(trackingType == 1)
+                    {
+                        NGX_SDK.PMDG_NGX_Control cData = (NGX_SDK.PMDG_NGX_Control)data.dwData[0];
+                    } else if (trackingType == 2)
+                    {
+                        B777_SDK.PMDG_777X_Control cData = (B777_SDK.PMDG_777X_Control)data.dwData[0];
+                    }
+                    
                     break;
             }
         }
@@ -393,7 +476,7 @@ namespace FlightWatch
                     simconnectPMDG.OnRecvException += new SimConnect.RecvExceptionEventHandler(simconnect_OnRecvException);
 
                     displayText("Connected to Prepar3D");
-                    setButtons(false, true, true, false, false);
+                    setButtons(false, true, true, true, false);
 
                 }
                 catch (COMException ex)
@@ -418,10 +501,14 @@ namespace FlightWatch
             buttonB737.Text = "Track PMDG 737";
             buttonB777.Text = "Track PMDG 777";
             buttonB747.Text = "Track PMDG 747";
+
+            trackingType = 0;
         }
 
         private void buttonB737_Click(object sender, EventArgs e)
         {
+            trackingType = 1;
+
             initDataRequest();
             displayText("Flight tracking started.");
 
@@ -431,7 +518,13 @@ namespace FlightWatch
 
         private void buttonB777_Click(object sender, EventArgs e)
         {
+            trackingType = 2;
 
+            initDataRequest();
+            displayText("Flight tracking started.");
+
+            buttonB777.Enabled = false;
+            buttonB777.Text = "Tracking PMDG 777...";
         }
 
         private void buttonB747_Click(object sender, EventArgs e)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+
 namespace FlightWatch
 {
     public class NGX_SDK
