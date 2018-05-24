@@ -46,7 +46,7 @@ namespace FlightWatch
         public MainForm()
         {
             InitializeComponent();
-            setButtons(true, false, false, false, false);
+            setButtons(true, false, false, false);
 
             try
             {
@@ -373,6 +373,11 @@ namespace FlightWatch
             }
         }
 
+        private void labelLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start("http://forum.vatsim-scandinavia.org/topic/2090-pilotwatch-fly-safely-when-afk/");
+        }
+
 
         /*
          * ===============================
@@ -380,13 +385,12 @@ namespace FlightWatch
          * ===============================
         */
 
-        private void setButtons(bool bConnect, bool bDisconnect, bool b737, bool b777, bool b747)
+        private void setButtons(bool bConnect, bool bDisconnect, bool b737, bool b777)
         {
             buttonConnect.Enabled = bConnect;
             buttonDisconnect.Enabled = bDisconnect;
             buttonB737.Enabled = b737;
             buttonB777.Enabled = b777;
-            buttonB747.Enabled = b747;
         }
 
         private void displayText(string s)
@@ -459,7 +463,7 @@ namespace FlightWatch
                     simconnectPMDG.OnRecvException += new SimConnect.RecvExceptionEventHandler(simconnect_OnRecvException);
 
                     displayText("Connected to Prepar3D");
-                    setButtons(false, true, true, true, false);
+                    setButtons(false, true, true, true);
 
                 }
                 catch (COMException ex)
@@ -472,18 +476,17 @@ namespace FlightWatch
                 MessageBox.Show("Connection error, please try again.", "Connection error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 closeConnection();
 
-                setButtons(true, false, false, false, false);
+                setButtons(true, false, false, false);
             }
         }
 
         private void buttonDisconnect_Click(object sender, EventArgs e)
         {
             closeConnection();
-            setButtons(true, false, false, false, false);
+            setButtons(true, false, false, false);
 
             buttonB737.Text = "Track PMDG 737";
             buttonB777.Text = "Track PMDG 777";
-            buttonB747.Text = "Track PMDG 747";
 
             trackingType = 0;
         }
@@ -495,7 +498,7 @@ namespace FlightWatch
             initDataRequest();
             displayText("Flight tracking started.");
 
-            buttonB737.Enabled = false;
+            setButtons(false, true, false, false);
             buttonB737.Text = "Tracking PMDG 737...";
         }
 
@@ -506,13 +509,8 @@ namespace FlightWatch
             initDataRequest();
             displayText("Flight tracking started.");
 
-            buttonB777.Enabled = false;
+            setButtons(false, true, false, false);
             buttonB777.Text = "Tracking PMDG 777...";
-        }
-
-        private void buttonB747_Click(object sender, EventArgs e)
-        {
-
         }
     }
 }
