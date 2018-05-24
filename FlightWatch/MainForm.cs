@@ -229,8 +229,6 @@ namespace FlightWatch
             {
                 case DATA_REQUEST_ID.DATA_REQUEST:
 
-                    displayText("im testin type: " + trackingType);
-
                     if (trackingType == 1) // *** PMDG NGX ***
                     {
                         NGX_SDK.PMDG_NGX_Data sData = (NGX_SDK.PMDG_NGX_Data)data.dwData[0];
@@ -320,9 +318,6 @@ namespace FlightWatch
                         this.Invoke((MethodInvoker)delegate
                         {
 
-                            displayText("im testin");
-
-                            // Caution work, but not warning.
                             if (WARN_annunMASTER_WARNING != Convert.ToBoolean(sData.WARN_annunMASTER_WARNING[0]))
                             {
                                 WARN_annunMASTER_WARNING = Convert.ToBoolean(sData.WARN_annunMASTER_WARNING[0]);
@@ -332,19 +327,7 @@ namespace FlightWatch
                             if (WARN_annunMASTER_CAUTION != Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[0]))
                             {
                                 WARN_annunMASTER_CAUTION = Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[0]);
-                                if (Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[0]))
-                                {
-                                    string msg = null;
-
-                                    /*if (Convert.ToBoolean(sData.WARN_annunFLT_CONT)) msg += "FLT-CONT ";
-                                    if (Convert.ToBoolean(sData.WARN_annunIRS)) msg += "IRS ";
-                                    if (Convert.ToBoolean(sData.WARN_annunFUEL)) msg += "FUEL ";
-                                    if (Convert.ToBoolean(sData.WARN_annunELEC)) msg += "ELEC ";
-                                    if (Convert.ToBoolean(sData.WARN_annunAPU)) msg += "APU ";
-                                    if (Convert.ToBoolean(sData.WARN_annunOVHT_DET)) msg += "OVHT/DET ";*/
-
-                                    if (msg != null) Notify("Master Caution!", msg); else Notify("Master Caution!");
-                                }
+                                if (Convert.ToBoolean(sData.WARN_annunMASTER_CAUTION[0])) Notify("Master Caution!");
                             }
 
                         });
